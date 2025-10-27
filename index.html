@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-full font-sans">
+    <main class="container mx-auto px-4 py-8 max-w-2xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">My To-Do List</h1>
+            <p class="text-gray-600">Stay organized and get things done!</p>
+        </header>
+
+        <!-- Add Task Form -->
+        <section class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <form id="addTaskForm" class="flex gap-3">
+                <label for="taskInput" class="sr-only">New task</label>
+                <input 
+                    type="text" 
+                    id="taskInput" 
+                    placeholder="What needs to be done?" 
+                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                >
+                <button 
+                    type="submit" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                    Add Task
+                </button>
+            </form>
+        </section>
+
+        <!-- Tasks List -->
+        <section class="bg-white rounded-lg shadow-md">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800">Tasks</h2>
+                <p id="taskCount" class="text-sm text-gray-600 mt-1">0 tasks remaining</p>
+            </div>
+            <div id="tasksList" class="divide-y divide-gray-200">
+                <!-- Tasks will be added here dynamically -->
+            </div>
+            <div id="emptyState" class="p-12 text-center text-gray-500">
+                <div class="text-6xl mb-4">📝</div>
+                <p class="text-lg">No tasks yet. Add one above to get started!</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        class TodoApp {
+            constructor() {
+                this.tasks = [];
+                this.nextId = 1;
+                this.editingId = null;
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.updateDisplay();
+            }
+            
+            initializeElements() {
+                this.addForm = document.getElementById('addTaskForm');
+                this.taskInput = document.getElementById('taskInput');
+                this.tasksList = document.getElementById('tasksList');
+                this.emptyState = document.getElementById('emptyState');
+                this.taskCount = document.getElementById('taskCount');
+            }
+            
+            bindEvents() {
+                this.addForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAddTask();
+                });
+            }
+            
+            handleAddTask() {
+                const text = this.taskInput.value.trim();
+                if (!text) return;
+                
+                const task = {
+                    id: this.nextId++,
+                    text: text,
+                    completed: false,
+                    createdAt: new Date()
+                };
+                
+                this.tasks.push(task);
+                this.taskInput.value = '';
+                this.updateDisplay();
+            }
+            
+            handleEditTask(id) {
+                const task = this.tasks.find(t => t.id === id);
+                if (!task) return;
+                
+                this.editingId = id;
+                this.renderTasks();
+            }
+            
+            handleSaveEdit(id, newText) {
+                const task = this.tasks.find(t => t.id === id);
+                if (!task) return;
+                
+                task.text = newText.trim();
+                this.editingId = null;
+                this.updateDisplay();
+            }
+            
+            handleCancelEdit() {
+                this.editingId = null;
+                this.renderTasks();
+            }
+            
+            handleDeleteTask(id) {
+                this.tasks = this.tasks.filter(t => t.id !== id);
+                this.editingId = null;
+                this.updateDisplay();
+            }
+            
+            handleToggleComplete(id) {
+                const task = this.tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    this.updateDisplay();
+                }
+            }
+            
+            updateDisplay() {
+                this.renderTasks();
+                this.updateTaskCount();
+                this.toggleEmptyState();
+            }
+            
+            renderTasks() {
+                this.tasksList.innerHTML = '';
+                
+                this.tasks.forEach(task => {
+                    const taskElement = this.createTaskElement(task);
+                    this.tasksList.appendChild(taskElement);
+                });
+            }
+            
+            createTaskElement(task) {
+                const div = document.createElement('div');
+                div.className = 'p-4 hover:bg-gray-50 transition-colors duration-150';
+                
+                if (this.editingId === task.id) {
+                    div.innerHTML = this.createEditTemplate(task);
+                } else {
+                    div.innerHTML = this.createTaskTemplate(task);
+                }
+                
+                this.bindTaskEvents(div, task);
+                return div;
+            }
+            
+            createTaskTemplate(task) {
+                return `
+                    <div class="flex items-center gap-3">
+                        <input 
+                            type="checkbox" 
+                            ${task.completed ? 'checked' : ''} 
+                            class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                            data-action="toggle"
+                            data-id="${task.id}"
+                        >
+                        <span class="flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'} text-lg">
+                            ${this.escapeHtml(task.text)}
+                        </span>
+                        <div class="flex gap-2">
+                            <button 
+                                class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                data-action="edit"
+                                data-id="${task.id}"
+                            >
+                                Edit
+                            </button>
+                            <button 
+                                class="text-red-600 hover:text-red-800 px-3 py-1 rounded-md hover:bg-red-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                data-action="delete"
+                                data-id="${task.id}"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            createEditTemplate(task) {
+                return `
+                    <div class="flex items-center gap-3">
+                        <input 
+                            type="checkbox" 
+                            ${task.completed ? 'checked' : ''} 
+                            class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                            data-action="toggle"
+                            data-id="${task.id}"
+                        >
+                        <input 
+                            type="text" 
+                            value="${this.escapeHtml(task.text)}" 
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            data-action="edit-input"
+                            data-id="${task.id}"
+                            autofocus
+                        >
+                        <div class="flex gap-2">
+                            <button 
+                                class="text-green-600 hover:text-green-800 px-3 py-1 rounded-md hover:bg-green-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                data-action="save"
+                                data-id="${task.id}"
+                            >
+                                Save
+                            </button>
+                            <button 
+                                class="text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md hover:bg-gray-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                data-action="cancel"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            bindTaskEvents(element, task) {
+                element.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    const id = parseInt(e.target.dataset.id);
+                    
+                    switch (action) {
+                        case 'toggle':
+                            this.handleToggleComplete(id);
+                            break;
+                        case 'edit':
+                            this.handleEditTask(id);
+                            break;
+                        case 'delete':
+                            this.handleDeleteTask(id);
+                            break;
+                        case 'save':
+                            const input = element.querySelector('[data-action="edit-input"]');
+                            this.handleSaveEdit(id, input.value);
+                            break;
+                        case 'cancel':
+                            this.handleCancelEdit();
+                            break;
+                    }
+                });
+                
+                // Handle Enter key for saving edits
+                const editInput = element.querySelector('[data-action="edit-input"]');
+                if (editInput) {
+                    editInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            this.handleSaveEdit(task.id, editInput.value);
+                        } else if (e.key === 'Escape') {
+                            this.handleCancelEdit();
+                        }
+                    });
+                }
+            }
+            
+            updateTaskCount() {
+                const remaining = this.tasks.filter(t => !t.completed).length;
+                const total = this.tasks.length;
+                
+                if (total === 0) {
+                    this.taskCount.textContent = 'No tasks yet';
+                } else if (remaining === 0) {
+                    this.taskCount.textContent = 'All tasks completed! 🎉';
+                } else {
+                    this.taskCount.textContent = `${remaining} of ${total} tasks remaining`;
+                }
+            }
+            
+            toggleEmptyState() {
+                if (this.tasks.length === 0) {
+                    this.emptyState.style.display = 'block';
+                    this.tasksList.style.display = 'none';
+                } else {
+                    this.emptyState.style.display = 'none';
+                    this.tasksList.style.display = 'block';
+                }
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize the app when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new TodoApp();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'992edb4543f49367',t:'MTc2MTE5NzU3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
