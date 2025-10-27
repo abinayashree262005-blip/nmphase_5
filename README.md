@@ -15,10 +15,6 @@ JavaScript (ES6) – app logic and interactivity
 📂 Project Structure
 /todo-list │ ├── index.html # Main HTML file ├── style.css # Styling file ├── script.js # JavaScript logic └── README.md # Project documentation
 
-Repository link:https://github.com/Ashalidia/TO-DO-LIST.git
-
-deployment link:https://ashalidia.github.io/TO-DO-LIST/
-
 🧠 Future Enhancements
 
 🌙 Add dark/light mode
